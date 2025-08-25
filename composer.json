@@ -1,0 +1,6 @@
+{
+    "require": {
+        "mobiledetect/mobiledetectlib": "^4.8",
+        "vlucas/phpdotenv": "^5.6"
+    }
+}
