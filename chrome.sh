@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+echo sudo -i
+
 echo "=== Update system ==="
 sudo dnf update -y
 
@@ -8,7 +10,6 @@ echo "=== Install dependencies ==="
 sudo dnf install -y \
     unzip \
     wget \
-    curl \
     git \
     php-cli \
     php-common \
