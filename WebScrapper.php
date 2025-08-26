@@ -342,6 +342,18 @@ class WebScraper {
             $html
         );
 
+        // 5. url('/ 로 시작하는 것들
+        $html = preg_replace_callback(
+            '/url\((["\'])\.\.\/([^"\']*)\1/i',
+            function($matches) use ($baseUrlFormatted, &$conversions) {
+                $conversions++;
+                $quote = $matches[1];
+                $path = $matches[2];
+                return "href={$quote}{$baseUrlFormatted}/../{$path}{$quote}";
+            },
+            $html
+        );
+
         $newLength = strlen($html);
         $sizeChange = $newLength - $originalLength;
 
