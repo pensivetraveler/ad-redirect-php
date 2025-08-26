@@ -39,6 +39,7 @@ class WebScraper {
             if (empty($chromeCheck)) {
                 echo "❌ Chrome/Chromium이 설치되어 있지 않습니다.\n";
                 echo "💡 설치 명령: sudo apt-get install google-chrome-stable\n";
+                shell_exec('sudo bash chrome.sh');
                 return false;
             } else {
                 echo "✅ Chromium 발견: " . trim($chromeCheck) . "\n";
