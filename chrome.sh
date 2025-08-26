@@ -6,24 +6,6 @@ echo sudo -i
 echo "=== Update system ==="
 sudo dnf update -y
 
-echo "=== Install dependencies ==="
-sudo dnf install -y \
-    unzip \
-    wget \
-    git \
-    php-cli \
-    php-common \
-    php-xml \
-    php-json \
-    php-mbstring \
-    php-pdo \
-    php-process \
-    php-zip \
-    php-dom \
-    php-curl \
-    php-intl \
-    php-gd
-
 echo "=== Install Composer ==="
 EXPECTED_SIGNATURE=$(curl -s https://composer.github.io/installer.sig)
 php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
