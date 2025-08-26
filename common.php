@@ -1,6 +1,4 @@
 <?php
-$approved = true;
-
 require_once 'vendor/autoload.php';
 use Detection\MobileDetect;
 // Mobile Detect 인스턴스
@@ -8,6 +6,8 @@ $detect = new MobileDetect;
 
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
+
+$approved = filter_var($_ENV['APPROVED'], FILTER_VALIDATE_BOOLEAN);
 
 session_set_cookie_params([
     'lifetime' => 0,
@@ -97,6 +97,7 @@ function issueJsToken() {
 function verifyJsToken() {
     header('Content-Type: application/json');
     $input = json_decode(file_get_contents('php://input'), true);
+    $isIOS = !empty($input['isIOS']) && $input['isIOS'] === true;
 
     // 3️⃣ 클라이언트/서버 IP 추출
     $clientIp = $input['ip'] ?? null;                       // JS에서 전달받은 IP
@@ -110,42 +111,59 @@ function verifyJsToken() {
         'serverIpScore' => isLikelyBot($serverIp, true),
     ];
 
-    // 1️⃣ 세션이 없으면 새 토큰 발급 → retry
-    if (!isset($_SESSION['js_token'])) {
-        $_SESSION['js_token'] = bin2hex(random_bytes(16));
-        echo json_encode(array_merge(['status'=>'retry','token'=>$_SESSION['js_token']], $response));
-        exit;
-    }
+    if ($isIOS) {
+        // iOS iframe 전용 처리 (세션 없이)
+        if (!isset($input['token'])) {
+            $newToken = bin2hex(random_bytes(16));
+            echo json_encode(array_merge(['status'=>'retry','token'=>$newToken], $response));
+            exit;
+        }
 
-    // 2️⃣ 클라이언트에서 토큰을 못 받으면 실패
-    if (!isset($input['token'])) {
-        echo json_encode(array_merge(['status'=>'fail','reason'=>'missing'], $response));
-        exit;
-    }
+        if (isBot() || isLikelyBot(getClientIp())) {
+            echo json_encode(array_merge(['status'=>'fail','reason'=>'bot_detected'], $response));
+            exit;
+        }
 
-    // if ($clientIp && $clientIp !== $serverIpNorm) {
-    //     // IP 불일치 → VPN/Proxy/의심 가능성
-    //     echo json_encode([
-    //         'status' => 'fail',
-    //         'reason' => 'ip_mismatch',
-    //         'clientIp' => $clientIp,
-    //         'serverIp' => $serverIpNorm
-    //     ]);
-    //     exit;
-    // }
-
-    // 3️⃣ UA/헤더 기반 봇 체크
-    // common.php에 있는 isBot() / isLikelyBot() 사용
-    if (isLikelyBot($clientIp) || isLikelyBot($serverIp)) {
-        echo json_encode(array_merge(['status'=>'fail','reason'=>'bot_detected'], $response));
-        exit;
-    }
-
-    // 4️⃣ JS 토큰 검증
-    if (hash_equals($_SESSION['js_token'], $input['token'])) {
         echo json_encode(array_merge(['status'=>'ok'], $response));
-    } else {
-        echo json_encode(array_merge(['status'=>'fail','reason'=>'invalid'], $response));
+        exit;
+    }else{
+        // 1️⃣ 세션이 없으면 새 토큰 발급 → retry
+        if (!isset($_SESSION['js_token'])) {
+            $_SESSION['js_token'] = bin2hex(random_bytes(16));
+            echo json_encode(array_merge(['status'=>'retry','token'=>$_SESSION['js_token']], $response));
+            exit;
+        }
+
+        // 2️⃣ 클라이언트에서 토큰을 못 받으면 실패
+        if (!isset($input['token'])) {
+            echo json_encode(array_merge(['status'=>'fail','reason'=>'missing'], $response));
+            exit;
+        }
+
+        // if ($clientIp && $clientIp !== $serverIpNorm) {
+        //     // IP 불일치 → VPN/Proxy/의심 가능성
+        //     echo json_encode([
+        //         'status' => 'fail',
+        //         'reason' => 'ip_mismatch',
+        //         'clientIp' => $clientIp,
+        //         'serverIp' => $serverIpNorm
+        //     ]);
+        //     exit;
+        // }
+
+        // 3️⃣ UA/헤더 기반 봇 체크
+        // common.php에 있는 isBot() / isLikelyBot() 사용
+        if (isLikelyBot($clientIp) || isLikelyBot($serverIp)) {
+            echo json_encode(array_merge(['status'=>'fail','reason'=>'bot_detected'], $response));
+            exit;
+        }
+
+        // 4️⃣ JS 토큰 검증
+        if (hash_equals($_SESSION['js_token'], $input['token'])) {
+            echo json_encode(array_merge(['status'=>'ok'], $response));
+        } else {
+            echo json_encode(array_merge(['status'=>'fail','reason'=>'invalid'], $response));
+        }
+        exit;
     }
-    exit;
 }
